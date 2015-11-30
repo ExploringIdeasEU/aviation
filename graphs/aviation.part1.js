@@ -8,21 +8,26 @@ var dataset, states, n;
 
 var map;  // Datamap
 
-var visWidth;  // Auto-generated 
+var visWidth, visHeight;  // Auto-generated 
 
-var accColors = {};  // Colormaps
-    
+var accColors = {},  // Colormaps
+    incColors = {};
 
-var minAcc = 1,
-    maxAcc = 1280
+
+var minAcc = 0,
+    maxAcc = 1300,
+    minInc = 0,
+    maxInc = 50;
 
 var cLevels = 9;  // Number of color levels
 
-var accPalette = colorbrewer['Greens'][cLevels];
+var accPalette = colorbrewer['Greens'][cLevels],
+    incPalette = colorbrewer['Blues'][cLevels];
 
 var cellWidth = 30, // Width of color legend cell
     cbarWidth = cellWidth*cLevels;
     cbarHeight = 15;  // Height of color legend
+
 
 // --------------------------------------------------
 // Set up scales
@@ -30,6 +35,11 @@ var cellWidth = 30, // Width of color legend cell
 var accScale = d3.scale.quantize()
   .domain([minAcc, maxAcc])
   .range(accPalette);
+
+var incScale = d3.scale.quantize()
+  .domain([minInc, maxInc])
+  .range(incPalette);
+
 
 // --------------------------------------------------
 // Load data and generate map
@@ -42,7 +52,8 @@ d3.json(dataFile, function(error, dataset) {
 
     // Set up choropleth colorings
     for (var i=0; i<n; i++) {
-      accColors[states[i]] = accScale(+dataset[states[i]]);
+      accColors[states[i]] = accScale(+dataset[states[i]].accident);
+      incColors[states[i]] = incScale(+dataset[states[i]].incident);
     }
 
     // Create map
@@ -65,9 +76,15 @@ d3.json(dataFile, function(error, dataset) {
 
     // Build color gradients
     buildGradient(accPalette, 'accGradient');
+    buildGradient(incPalette, 'incGradient');
 
     // Draw colorbar
     visWidth = document.getElementById('vis').offsetWidth;
+    visHeight = document.getElementById('vis').offsetHeight;
+
+    d3.select('.datamap')
+        .attr("viewBox", "0 0 " + visWidth+ " " +visHeight )
+        .attr("preserveAspectRatio", "xMidYMid meet");
 
     cbar = d3.select('.datamap').append('g')
       .attr('id', 'colorBar')
@@ -111,7 +128,6 @@ d3.json(dataFile, function(error, dataset) {
 // --------------------------------------------------
 // Functions for updating colors
 
-
 function showAcc() {
   d3.select('#gradientRect').style('fill', 'url(#accGradient)');
 
@@ -121,6 +137,19 @@ function showAcc() {
 
   map.updateChoropleth(accColors);
 };
+
+function showInc() {
+  d3.select('#gradientRect').style('fill', 'url(#incGradient)');
+
+  d3.select('#colorBarMinText').text(rstr(minInc));
+
+  d3.select('#colorBarMaxText').text(rstr(maxInc));
+
+  map.updateChoropleth(incColors);
+};
+
+
+
 // --------------------------------------------------
 // Function to build gradients
 
@@ -152,8 +181,12 @@ function statePopup(geography, data) {
     + '<div class="hover-state-stats">'
     + '<table>'
     + '<tr>'
+      + '<td>Number of accidents:</td>'
+      + '<td>' + rstr(data.accident) + '</td>'
+    + '</tr>'
+    + '<tr>'
       + '<td>Number of incidents:</td>'
-      + '<td>' + rstr(data) + '</td>'
+      + '<td>' + rstr(data.incident) + '</td>'
     + '</tr>'
     + '</table>'
     + '</div>'
